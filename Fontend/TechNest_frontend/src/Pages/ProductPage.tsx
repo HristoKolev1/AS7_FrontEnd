@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ProductCard from '../Components/ProductCard';
-import products from '../data/product';
+import { fetchProducts } from '../data/fetchingProducts';
 import { Product } from '../types';
 import './ProductPage.css';
 
 const ProductsPage: React.FC = () => {
   const [nameFilter, setNameFilter] = useState<string>('');
   const [priceFilter, setPriceFilter] = useState<number | ''>('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
 
   const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNameFilter(e.target.value);
@@ -23,6 +26,24 @@ const ProductsPage: React.FC = () => {
     const matchesPrice = priceFilter === '' || product.price <= priceFilter;
     return matchesName && matchesPrice;
   });
+   useEffect(() => {
+    // kick off the API call once, when the component mounts
+    fetchProducts()
+      .then(data => {
+        setProducts(data);    // store the array of products
+        setError(null);
+      })
+      .catch(err => {
+        console.error(err);
+        setError('Could not load products.');
+      })
+      .finally(() => {
+        setLoading(false);    // turn off your loading indicator
+      });
+  }, []); // empty deps → only run on first render
+
+  if (loading) return <p>Loading products…</p>;
+  if (error)   return <p className="error">{error}</p>;
 
   return (
     <div className="products-page">

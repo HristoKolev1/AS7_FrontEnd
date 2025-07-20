@@ -1,0 +1,54 @@
+/* src/pages/OrderHistoryPage.css */
+
+.order-history-page {
+  padding: 1rem;
+  font-family: sans-serif;
+}
+
+.orders-table,
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.orders-table th,
+.orders-table td,
+.items-table th,
+.items-table td {
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.order-row {
+  background: #f9f9f9;
+}
+
+.items-row {
+  background: #fff;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.error {
+  color: red;
+  padding: 1rem;
+}
+.back-btn {
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background: #eee;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.back-btn:hover {
+  background: #ddd;
+}

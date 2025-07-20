@@ -1,45 +1,134 @@
-// src/Pages/ShoppingCart.tsx
-import React, { useContext } from 'react';
-import { CartContext } from '../Components/CartContext';
+// src/pages/ShoppingCart.tsx
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useUser } from '../context/UserContext';
+import { jwtDecode } from 'jwt-decode';
+import { JWTPayload } from '../types';
+import { useNavigate } from 'react-router-dom';
 import './ShoppingCart.css';
 
-const ShoppingCart: React.FC = () => {  
-  const cartContext = useContext(CartContext);
+interface CartItem {
+  id:         number;
+  cartId:     number;
+  productId:  string;
+  price:      number;
+}
 
-  if (!cartContext) {
-    return <div>Cart context is not available.</div>;
-  }
+interface Cart {
+  id:         number;
+  user_id:    number;
+  cartItems:  CartItem[];
+}
 
-  const { cartItems, removeFromCart, clearCart } = cartContext;
+interface CartResponse {
+  cartList: Array<{
+    id:       number;
+    user_id:  number;
+    itemList: CartItem[];
+  }>;
+}
 
-  const totalPrice = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+const ShoppingCart: React.FC = () => {
+  const { user } = useUser();
+  const navigate = useNavigate();
+  const [cart,    setCart]    = useState<Cart | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState<string | null>(null);
+
+  // Fetch cart
+  useEffect(() => {
+    if (!user) {
+      setError('You must be logged in to view your cart.');
+      setLoading(false);
+      return;
+    }
+    const fetchCart = async () => {
+      try {
+        const token = localStorage.getItem('jwtToken');
+        if (!token) throw new Error('Not authenticated');
+        const { id: userId } = jwtDecode<JWTPayload & { id: number }>(token);
+
+        const res = await axios.get<CartResponse>(
+          `http://a3ad27d89d462415f88d95f321d52072-993907692.eu-central-1.elb.amazonaws.com/cart/${userId}`
+        );
+        const list = res.data.cartList || [];
+        if (list.length === 0) {
+          setCart(null);
+        } else {
+          const first = list[0];
+          setCart({
+            id:        first.id,
+            user_id:   first.user_id,
+            cartItems: first.itemList
+          });
+          console.log('Cart loaded:', cart);
+        }
+      } catch (err) {
+        console.error('Failed to load cart:', err);
+        setError('Could not load your shopping cart.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCart();
+  }, [user]);
+
+  // Remove one item
+  const removeItem = async (itemId: number) => {
+    if (!cart) return;
+    try {
+      await axios.delete<void>(
+        `http://a3ad27d89d462415f88d95f321d52072-993907692.eu-central-1.elb.amazonaws.com/cart/${cart.id}`
+      );
+      // Optimistically update UI
+      setCart({
+        ...cart,
+        cartItems: cart.cartItems.filter(i => i.id !== itemId)
+      });
+    } catch (err) {
+      console.error('Failed to remove item:', err);
+      alert('Could not remove item.');
+    }
+  };
+
+  if (loading) return <p>Loading your cart…</p>;
+  if (error)   return <p className="error">{error}</p>;
+
+  const items = cart?.cartItems ?? [];
+console.log('Cart items:', items);
+  const totalPrice = items.reduce((sum, item) => sum + item.price, 0);
 
   return (
     <div className="shopping-cart">
       <h1>Your Shopping Cart</h1>
-      {cartItems.length === 0 ? (
+      {items.length === 0 ? (
         <p>Your shopping cart is empty.</p>
       ) : (
         <>
           <ul className="cart-items">
-            {cartItems.map(item => (
+            {items.map(item => (
               <li key={item.id} className="cart-item">
-                <img src={item.image} alt={item.name} className="cart-item-image" />
                 <div className="cart-item-info">
-                  <h2>{item.name}</h2>
-                  <p>Price: ${item.price}</p>
-                  <p>Quantity: {item.quantity}</p>
-                  <button onClick={() => removeFromCart(item.id)} className="remove-btn">
-                    Remove
-                  </button>
+                  <p><strong>Product ID:</strong> {item.productId}</p>
+                  <p><strong>Price:</strong> ${item.price.toFixed(2)}</p>
                 </div>
+                <button
+                  className="remove-btn"
+                  onClick={() => removeItem(item.id)}
+                >
+                  Remove
+                </button>
               </li>
             ))}
           </ul>
+
           <div className="cart-summary">
             <h2>Total: ${totalPrice.toFixed(2)}</h2>
-            <button onClick={clearCart} className="clear-btn">
-              Clear Cart
+            <button
+              className="pay-btn"
+              onClick={() => navigate('/payment',{state:{cart}})}
+            >
+              Pay Now
             </button>
           </div>
         </>

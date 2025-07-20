@@ -1,22 +1,61 @@
-// src/components/Header.tsx
+// src/Components/Header.tsx
 import React from 'react';
-import { Link } from 'react-router-dom';
-import './Header.css'; // optional: if you want to isolate nav styles
+import { Link, useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
+import './Header.css';
 
 const Header: React.FC = () => {
+  const { user, logout } = useUser();
+  const navigate         = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
-    <header className="header">
-      <div className="logo">Tech Store</div>
-      <nav className="nav">
-        <ul>
-          <li><a href="/">Home</a></li>
-          <li><a href="/products">Products</a></li>
-          <li><a href="/about">About</a></li>
-          <li><a href="/contact">Contact</a></li>
-          <li><Link to="/cart">Cart</Link></li>
-        </ul>
-      </nav>
-    </header>
+    <>
+      <header className="header">
+        <div className="logo"><Link to="/">Tech Store</Link></div>
+        <nav className="nav">
+          <ul>
+            <li><Link to="/">Home</Link></li>
+            <li><Link to="/products">Products</Link></li>
+            <li><Link to="/about">About</Link></li>
+            {
+              !user && (
+               <li><Link to="/register">Register</Link></li> 
+              )
+            }
+            
+
+
+            {user ? (
+              <>
+                {user.role === 'Admin' && (
+                  // Admin‐only link
+                  <li><Link to="/admin">Admin Dashboard</Link></li>
+                )}
+
+                {/* Common logged‐in links */}
+                <li><Link to="/profile">Profile</Link></li>
+                <li><Link to="/cart">Cart</Link></li>
+                <li>
+                  <button onClick={handleLogout} className="logout-btn">
+                    Logout
+                  </button>
+                </li>
+              </>
+            ) : (
+              // Guest link
+              <li><Link to="/login">Login</Link></li>
+            )}
+          </ul>
+        </nav>
+      </header>
+
+
+    </>
   );
 };
 
